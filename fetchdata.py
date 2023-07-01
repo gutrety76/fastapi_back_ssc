@@ -36,6 +36,33 @@ def bancard(name):
             user = cursor.fetchone()
             return user
 
+def log_attempt(card_id, attempt_result,name):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO card_history (card_id, attempt_result,name) VALUES (%s, %s,%s)",
+                (card_id, attempt_result,name)
+            )
+            conn.commit()
+
+
+def get_cards():
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            
+            cursor.execute("SELECT * FROM card ")
+            user = cursor.fetchall()
+            return user
+def fetchStatistic(start_date,end_date):
+
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM card_history WHERE attempt_date BETWEEN %s AND %s", (start_date, end_date))
+            stats = cursor.fetchall()
+            return stats
+
+
+
 def unbancard(name):
     with get_connection() as conn:
         with conn.cursor() as cursor:
@@ -44,19 +71,30 @@ def unbancard(name):
             cursor.execute("SELECT * FROM card WHERE number = %s", (name,))
             user = cursor.fetchone()
             return user
-def increase_suc(name):
+def increase_suc(card_number):
     with get_connection() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("UPDATE  card set attempts_suc = attempts_suc + 1 WHERE number = %s", (name,))
+            cursor.execute("SELECT name FROM card WHERE number = %s", (card_number,))
+            user_name = cursor.fetchone()[0]
+            cursor.execute("UPDATE card SET attempts_suc = attempts_suc + 1 WHERE number = %s RETURNING id", (card_number,))
+            card_id = cursor.fetchone()[0]
             conn.commit()
-            cursor.execute("SELECT * FROM card WHERE number = %s", (name,))
+            cursor.execute("SELECT * FROM card WHERE number = %s", (card_number,))
             user = cursor.fetchone()
+            log_attempt(card_id, True, user_name)  
             return user
-def increase_fail(name):
+
+def increase_fail(card_number):
     with get_connection() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("UPDATE  card set attempts_fail = attempts_fail + 1 WHERE number = %s", (name,))
+            cursor.execute("SELECT name FROM card WHERE number = %s", (card_number,))
+            user_name = cursor.fetchone()[0]
+            cursor.execute("UPDATE card SET attempts_fail = attempts_fail + 1 WHERE number = %s RETURNING id", (card_number,))
+            card_id = cursor.fetchone()[0]
             conn.commit()
-            cursor.execute("SELECT * FROM card WHERE number = %s", (name,))
+            cursor.execute("SELECT * FROM card WHERE number = %s", (card_number,))
             user = cursor.fetchone()
+            log_attempt(card_id, False, user_name)  
             return user
+
+
